@@ -218,40 +218,24 @@ make clean      # Remove build artefacts
 
 ## Example Configurations
 
-### Node.js project
+The power of Chameleon is that `ingest` means the same thing to you regardless of which project you're in — but the underlying implementation is completely different.
+
+### RAG Server (Python)
 
 ```yaml
-name: "frontend-app"
-commands:
-  - name: dev
-    description: "Start dev server"
-    run: "npm run dev"
-    stream: true
-  - name: build
-    description: "Production build"
-    run:
-      - "npm ci"
-      - "npm run build"
-  - name: test
-    description: "Run tests"
-    run: "npm test"
-  - name: lint
-    description: "Lint and fix"
-    run: "npm run lint:fix"
-```
-
-### Python data pipeline
-
-```yaml
-name: "data-pipeline"
+name: "rag-server"
 commands:
   - name: ingest
-    description: "Run full ingestion cycle"
-    run: "python -m pipeline.ingest"
+    description: "Run document ingestion pipeline"
+    run: "python scripts/ingest.py --source ./documents"
     stream: true
-  - name: validate
-    description: "Validate data quality"
-    run: "python -m pipeline.validate"
+  - name: serve
+    description: "Start the RAG API server"
+    run: "python -m uvicorn app.main:app --reload"
+    stream: true
+  - name: embed
+    description: "Regenerate embeddings"
+    run: "python scripts/embed.py"
     stream: true
   - name: setup
     description: "Install dependencies"
@@ -260,26 +244,48 @@ commands:
       - ".venv/bin/pip install -r requirements.txt"
 ```
 
-### Infrastructure project
+### Apache Hop (ETL pipeline)
 
 ```yaml
-name: "platform-infra"
+name: "data-warehouse"
 commands:
-  - name: plan
-    description: "Terraform plan"
-    run: "terraform plan"
+  - name: ingest
+    description: "Run Hop ingestion workflow"
+    run: "hop-run --file workflows/ingest.hwf --runconfig local"
     stream: true
-  - name: apply
-    description: "Terraform apply"
-    run: "terraform apply -auto-approve"
+  - name: validate
+    description: "Run data quality checks"
+    run: "hop-run --file workflows/validate.hwf --runconfig local"
     stream: true
   - name: build
-    description: "Build all containers"
-    run:
-      - "docker build -t app ./app"
-      - "docker build -t worker ./worker"
-    parallel: true
+    description: "Build and export pipelines"
+    run: "hop-conf --export-metadata"
 ```
+
+### JavaScript CLI (Node.js)
+
+```yaml
+name: "content-ingestion-cli"
+commands:
+  - name: ingest
+    description: "Run JS ingestion process"
+    run: "node src/ingest.js --config config.json"
+    stream: true
+  - name: transform
+    description: "Transform and normalise data"
+    run: "node src/transform.js"
+    stream: true
+  - name: build
+    description: "Build the CLI"
+    run:
+      - "npm ci"
+      - "npm run build"
+  - name: test
+    description: "Run test suite"
+    run: "npm test"
+```
+
+In all three projects, you type `chameleon`, select `ingest`, and the right thing happens.
 
 ## Contributing
 
